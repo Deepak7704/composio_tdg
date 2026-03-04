@@ -20,7 +20,7 @@ export function buildGraphHTML(
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Tool Dependency Graph — ${query.slice(0, 60)}</title>
+<title>Tool Dependency Graph — ${query.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").slice(0, 60)}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',-apple-system,sans-serif;background:#0a0a0f;color:#e0e0e8;height:100vh;overflow:hidden}
@@ -42,7 +42,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:#0a0a0f;color:#e0e0
 .main-area{flex:1;position:relative}
 #graph{width:100%;height:100%}
 svg{width:100%;height:100%}
-.tooltip{position:absolute;background:#1a1a2aee;border:1px solid #3a3a4a;border-radius:8px;padding:12px;pointer-events:none;z-index:100;max-width:360px;font-size:12px;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.tooltip{position:fixed;background:#1a1a2aee;border:1px solid #3a3a4a;border-radius:8px;padding:12px 16px;pointer-events:none;z-index:200;max-width:420px;font-size:12px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.6);backdrop-filter:blur(6px)}
 .tooltip h3{font-size:13px;color:#fff;margin-bottom:4px}
 .tooltip .tt-tk{font-size:10px;color:#7c6cff;margin-bottom:4px}
 .tooltip .tt-desc{color:#999;font-size:11px;line-height:1.4}
@@ -153,10 +153,10 @@ const nodesCopy = NODES.map(n => ({...n}));
 const edgesCopy = EDGES.map(e => ({...e}));
 
 const sim = d3.forceSimulation(nodesCopy)
-  .force("link", d3.forceLink(edgesCopy).id(d => d.id).distance(140).strength(0.3))
-  .force("charge", d3.forceManyBody().strength(-350).distanceMax(600))
+  .force("link", d3.forceLink(edgesCopy).id(d => d.id).distance(180).strength(0.3))
+  .force("charge", d3.forceManyBody().strength(-500).distanceMax(800))
   .force("center", d3.forceCenter(W/2, H/2))
-  .force("collision", d3.forceCollide().radius(24))
+  .force("collision", d3.forceCollide().radius(50))
   .force("x", d3.forceX(W/2).strength(0.03))
   .force("y", d3.forceY(H/2).strength(0.03));
 
@@ -178,7 +178,12 @@ const circles = nodeG.selectAll("circle").data(nodesCopy).enter().append("circle
   .on("mouseover", (ev,d) => {
     const tt = document.getElementById("tooltip");
     tt.innerHTML = '<h3>'+d.label+'</h3>'+(d.toolkit?'<div class="tt-tk">'+d.toolkit+'</div>':'')+'<div class="tt-desc">'+d.description+'</div>';
-    tt.style.display = "block"; tt.style.left = (ev.pageX+12)+"px"; tt.style.top = (ev.pageY-20)+"px";
+    tt.style.display = "block";
+    positionTooltip(tt, ev.clientX, ev.clientY);
+  })
+  .on("mousemove", (ev) => {
+    const tt = document.getElementById("tooltip");
+    if (tt.style.display === "block") positionTooltip(tt, ev.clientX, ev.clientY);
   })
   .on("mouseout", () => { document.getElementById("tooltip").style.display = "none"; })
   .on("click", (ev,d) => focusNode(d.id))
@@ -189,16 +194,30 @@ const circles = nodeG.selectAll("circle").data(nodesCopy).enter().append("circle
   );
 
 const labels = labelG.selectAll("text").data(nodesCopy).enter().append("text")
-  .attr("text-anchor","middle").attr("dy", d => primarySlugs.has(d.id) ? -16 : -12)
-  .attr("fill","#aaa").attr("font-size", d => primarySlugs.has(d.id) ? "10px" : "8px")
+  .attr("text-anchor","middle").attr("dy", d => primarySlugs.has(d.id) ? -18 : -14)
+  .attr("fill","#ccc").attr("font-size", d => primarySlugs.has(d.id) ? "11px" : "9px")
+  .attr("font-weight", d => primarySlugs.has(d.id) ? "600" : "400")
   .attr("pointer-events","none")
-  .text(d => { const s = d.label.replace(/^GMAIL_|^GOOGLE[A-Z]*_|^GITHUB_/, ""); return s.length > 26 ? s.slice(0,23)+"..." : s; });
+  .text(d => { const s = d.label.replace(/^GMAIL_|^GOOGLE[A-Z]*_|^GITHUB_/, ""); return s.length > 36 ? s.slice(0,33)+"\u2026" : s; });
 
 sim.on("tick", () => {
   links.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
   circles.attr("cx",d=>d.x).attr("cy",d=>d.y);
   labels.attr("x",d=>d.x).attr("y",d=>d.y);
 });
+
+function positionTooltip(tt, cx, cy) {
+  const pad = 14;
+  const rect = tt.getBoundingClientRect();
+  let x = cx + pad;
+  let y = cy - pad;
+  if (x + rect.width > window.innerWidth - pad) x = cx - rect.width - pad;
+  if (y + rect.height > window.innerHeight - pad) y = window.innerHeight - rect.height - pad;
+  if (y < pad) y = pad;
+  if (x < pad) x = pad;
+  tt.style.left = x + "px";
+  tt.style.top = y + "px";
+}
 
 function focusNode(id) {
   circles.attr("opacity", d => d.id===id ? 1 : 0.25);

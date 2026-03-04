@@ -3,13 +3,39 @@ import * as readline from "node:readline/promises";
 import { writeFile } from "node:fs/promises";
 import { queryActionsPrompt } from "./prompts/queryActions";
 import { toolSelection } from "./prompts/toolSelection";
-import { createSession, searchTools, composio } from "./utils/session";
+import { createSession, searchTools, getDependencyGraph } from "./utils/session";
 import { buildGraphHTML } from "./graph/renderGraph";
 import type { ExecutionStep, ToolSchema, DependencyResult } from "./types/toolGraph";
 
 const openRouter = new OpenRouter();
 
-const generateQueryActions = async (query: string) => {
+const stripMarkdownFences = (text: string): string => {
+  const trimmed = text.trim();
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+  return fenceMatch?.[1] ? fenceMatch[1].trim() : trimmed;
+};
+
+interface QueryAction {
+  query: string;
+}
+
+const parseQueryActions = (raw: string): QueryAction[] => {
+  try {
+    const parsed = JSON.parse(stripMarkdownFences(raw));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item): item is QueryAction =>
+        typeof item === "object" && item !== null && typeof item.query === "string",
+      )
+      .map((item) => ({ query: item.query.trim() }))
+      .filter((item) => item.query.length > 0)
+      .slice(0, 7);
+  } catch {
+    return [];
+  }
+};
+
+const generateQueryActions = async (query: string): Promise<QueryAction[]> => {
   const result = await openRouter.chat.send({
     chatGenerationParams: {
       messages: [
@@ -21,7 +47,15 @@ const generateQueryActions = async (query: string) => {
       stream: false,
     },
   });
-  return result?.choices[0]?.message?.content as string;
+
+  const content = (result?.choices[0]?.message?.content as string) || "";
+  const actions = parseQueryActions(content);
+
+  if (actions.length === 0) {
+    throw new Error(`Planner returned no valid actions. Raw response: "${content.slice(0, 200)}"`);
+  }
+
+  return actions;
 };
 
 const selectRelevantTools = async (
@@ -32,6 +66,7 @@ const selectRelevantTools = async (
     slug,
     description: ((schema.description as string) || "").slice(0, 150),
   }));
+
   const result = await openRouter.chat.send({
     chatGenerationParams: {
       messages: [
@@ -43,24 +78,32 @@ const selectRelevantTools = async (
       stream: false,
     },
   });
-  const content = result?.choices[0]?.message?.content as string || "[]";
+
+  const content = (result?.choices[0]?.message?.content as string) || "[]";
   try {
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(stripMarkdownFences(content));
     if (Array.isArray(parsed) && parsed.every((s: unknown) => typeof s === "string")) {
       const validSlugs = new Set(Object.keys(toolSchemas));
-      return (parsed as string[]).filter((s) => validSlugs.has(s));
+      const filtered = (parsed as string[]).filter((s) => validSlugs.has(s));
+      if (filtered.length > 0) return filtered;
     }
   } catch {
-    console.warn("Failed to parse tool selection, falling back to all tools");
+    console.warn("Failed to parse tool selection response");
   }
-  return Object.keys(toolSchemas);
+  console.warn("Tool selection returned no valid slugs, using top 10 candidates");
+  return Object.keys(toolSchemas).slice(0, 10);
 };
 
 const filterDepGraphResults = async (
   query: string,
   depGraphs: DependencyResult[],
 ): Promise<DependencyResult[]> => {
-  const summary = depGraphs.map((d) => ({ tool: d.tool, data: d.data }));
+  const summary = depGraphs
+    .filter((d) => d.data)
+    .map((d) => ({ tool: d.tool, data: d.data }));
+
+  if (summary.length === 0) return depGraphs;
+
   const prompt = `You are a dependency-graph pruning expert. Given a user query and a set of tool dependency graphs, return ONLY the dependencies that are actually relevant to fulfilling the query.
 
 Return valid JSON — an array of objects with this shape:
@@ -69,7 +112,7 @@ Return valid JSON — an array of objects with this shape:
 If a tool has no relevant dependencies, use an empty array.
 
 Dependency graphs:
-${JSON.stringify(summary, null, 2)}`;
+${JSON.stringify(summary, null, 2).slice(0, 8000)}`;
 
   const result = await openRouter.chat.send({
     chatGenerationParams: {
@@ -83,9 +126,9 @@ ${JSON.stringify(summary, null, 2)}`;
     },
   });
 
-  const content = result?.choices[0]?.message?.content as string || "[]";
+  const content = (result?.choices[0]?.message?.content as string) || "[]";
   try {
-    const parsed = JSON.parse(content) as Array<{ tool: string; relevant_deps: string[] }>;
+    const parsed = JSON.parse(stripMarkdownFences(content)) as Array<{ tool: string; relevant_deps: string[] }>;
     if (!Array.isArray(parsed)) throw new Error("not an array");
     const relevantByTool = new Map<string, Set<string>>();
     for (const entry of parsed) {
@@ -112,6 +155,12 @@ ${JSON.stringify(summary, null, 2)}`;
   }
 };
 
+const toNumberArray = (val: unknown): number[] => {
+  if (Array.isArray(val)) return val.filter((v) => typeof v === "number");
+  if (typeof val === "number") return [val];
+  return [];
+};
+
 const generateExecutionSequence = async (
   query: string,
   selectedSlugs: string[],
@@ -123,7 +172,7 @@ const generateExecutionSequence = async (
   }));
   const prompt = `You are an execution-planning expert. Given a user query and a set of selected tools, produce an ordered execution sequence.
 
-Each step must have: "step", "tool", "purpose", "input_from", "output_used_by".
+Each step must have: "step" (number), "tool" (string), "purpose" (string), "input_from" (array of step numbers), "output_used_by" (array of step numbers).
 Respond ONLY with a valid JSON array.
 
 Available tools:
@@ -141,19 +190,14 @@ ${JSON.stringify(toolInfo, null, 2)}`;
     },
   });
 
-  const content = result?.choices[0]?.message?.content as string || "[]";
+  const content = (result?.choices[0]?.message?.content as string) || "[]";
   try {
-    const parsed = JSON.parse(content.replace(/(,|\{)\s*(\w+)\s*:/g, '$1"$2":'));
+    const parsed = JSON.parse(stripMarkdownFences(content));
     if (!Array.isArray(parsed)) throw new Error("not an array");
-    const toNumberArray = (val: unknown): number[] => {
-      if (Array.isArray(val)) return val.filter((v) => typeof v === "number");
-      if (typeof val === "number") return [val];
-      return [];
-    };
     return parsed.map((s: Record<string, unknown>) => ({
       step: s.step as number,
       tool: s.tool as string,
-      purpose: s.purpose as string,
+      purpose: (s.purpose as string) || "",
       inputFrom: toNumberArray(s.input_from ?? s.inputFrom),
       outputUsedBy: toNumberArray(s.output_used_by ?? s.outputUsedBy),
     }));
@@ -170,48 +214,65 @@ ${JSON.stringify(toolInfo, null, 2)}`;
 };
 
 async function start() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const query = await rl.question("Hello, how can I help you today?\n> ");
-  rl.close();
+  try {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const query = await rl.question("Hello, how can I help you today?\n> ");
+    rl.close();
 
-  if (!query.trim()) { console.error("Please provide a query"); process.exit(1); }
+    if (!query.trim()) {
+      console.error("Please provide a query");
+      process.exit(1);
+    }
 
-  const actions = await generateQueryActions(query);
-  console.log("Query actions:", actions);
+    console.log("\n1. Planning query actions...");
+    const actions = await generateQueryActions(query);
+    console.log("   Actions:", actions.map((a) => a.query));
 
-  const sessionId = await createSession();
-  console.log("Session ID:", sessionId);
+    console.log("\n2. Creating tool router session...");
+    const sessionId = await createSession();
+    console.log("   Session ID:", sessionId);
 
-  const toolSchemas = await searchTools(sessionId, actions);
-  console.log("Tool slugs from search:", Object.keys(toolSchemas));
+    console.log("\n3. Searching tools...");
+    const toolSchemas = await searchTools(sessionId, actions);
+    console.log("   Tool slugs from search:", Object.keys(toolSchemas));
 
-  const selectedSlugs = await selectRelevantTools(query, toolSchemas);
-  console.log("Selected relevant tools:", selectedSlugs);
+    console.log("\n4. Selecting relevant tools...");
+    const selectedSlugs = await selectRelevantTools(query, toolSchemas);
+    console.log("   Selected:", selectedSlugs);
 
-  const rawDepGraphs = await Promise.all(
-    selectedSlugs.map(async (slug) => {
-      const result = await composio.tools.execute("COMPOSIO_GET_DEPENDENCY_GRAPH", {
-        arguments: { tool_name: slug },
-        dangerouslySkipVersionCheck: true,
-      });
-      return { tool: slug, ...result } as DependencyResult;
-    })
-  );
-  console.log("Raw dependency graphs:", JSON.stringify(rawDepGraphs, null, 2));
+    console.log("\n5. Fetching dependency graphs...");
+    const rawDepGraphs = await Promise.allSettled(
+      selectedSlugs.map((slug) => getDependencyGraph(slug)),
+    );
+    const depGraphResults = rawDepGraphs
+      .filter((r): r is PromiseFulfilledResult<DependencyResult> => r.status === "fulfilled")
+      .map((r) => r.value);
 
-  const depGraphs = await filterDepGraphResults(query, rawDepGraphs);
-  console.log("Filtered dependency graphs:", JSON.stringify(depGraphs, null, 2));
+    const failedCount = rawDepGraphs.filter((r) => r.status === "rejected").length;
+    if (failedCount > 0) {
+      console.warn(`   ${failedCount} dependency graph(s) failed to fetch`);
+    }
+    console.log(`   Got ${depGraphResults.length} dependency graph(s)`);
 
-  const executionSequence = await generateExecutionSequence(query, selectedSlugs, toolSchemas);
-  console.log("Execution sequence:", JSON.stringify(executionSequence, null, 2));
+    console.log("\n6. Filtering dependency graphs...");
+    const depGraphs = await filterDepGraphResults(query, depGraphResults);
 
-  const selectedSchemas = Object.fromEntries(
-    Object.entries(toolSchemas).filter(([slug]) => selectedSlugs.includes(slug))
-  ) as Record<string, ToolSchema>;
+    console.log("\n7. Generating execution sequence...");
+    const executionSequence = await generateExecutionSequence(query, selectedSlugs, toolSchemas);
+    console.log("   Steps:", executionSequence.map((s) => `${s.step}. ${s.tool}`));
 
-  const html = buildGraphHTML(selectedSchemas, depGraphs, query, executionSequence);
-  await writeFile("graph.html", html, "utf-8");
-  console.log("Graph written to graph.html — open it in a browser.");
+    console.log("\n8. Building graph HTML...");
+    const selectedSchemas = Object.fromEntries(
+      Object.entries(toolSchemas).filter(([slug]) => selectedSlugs.includes(slug)),
+    ) as Record<string, ToolSchema>;
+
+    const html = buildGraphHTML(selectedSchemas, depGraphs, query, executionSequence);
+    await writeFile("graph.html", html, "utf-8");
+    console.log("   Graph written to graph.html — open it in a browser.");
+  } catch (err) {
+    console.error("\nError:", err instanceof Error ? err.message : err);
+    process.exit(1);
+  }
 }
 
 start();

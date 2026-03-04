@@ -8,6 +8,14 @@ export function buildGraphData(
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   const knownIds = new Set<string>();
+  const edgeKeys = new Set<string>();
+
+  const addEdge = (edge: GraphEdge) => {
+    const key = `${edge.source}->${edge.target}:${edge.type}`;
+    if (edgeKeys.has(key)) return;
+    edgeKeys.add(key);
+    edges.push(edge);
+  };
 
   for (const [slug, schema] of Object.entries(toolSchemas)) {
     knownIds.add(slug);
@@ -32,7 +40,7 @@ export function buildGraphData(
           knownIds.add(parentSlug);
           nodes.push({ id: parentSlug, label: parentSlug, toolkit: "", description: "Dependency (from graph)" });
         }
-        edges.push({ source: parentSlug, target: dep.tool, label: (parent.reason as string) || "", type: "dep" });
+        addEdge({ source: parentSlug, target: dep.tool, label: (parent.reason as string) || "", type: "dep" });
       }
     }
 
@@ -45,7 +53,7 @@ export function buildGraphData(
           knownIds.add(childSlug);
           nodes.push({ id: childSlug, label: childSlug, toolkit: "", description: "Dependent (from graph)" });
         }
-        edges.push({ source: dep.tool, target: childSlug, label: (child.reason as string) || "", type: "dep" });
+        addEdge({ source: dep.tool, target: childSlug, label: (child.reason as string) || "", type: "dep" });
       }
     }
   }
@@ -54,10 +62,7 @@ export function buildGraphData(
     for (const fromStep of step.inputFrom) {
       const sourceStep = executionSequence.find((s) => s.step === fromStep);
       if (sourceStep && knownIds.has(sourceStep.tool) && knownIds.has(step.tool)) {
-        const alreadyExists = edges.some((e) => e.source === sourceStep.tool && e.target === step.tool);
-        if (!alreadyExists) {
-          edges.push({ source: sourceStep.tool, target: step.tool, label: `Step ${fromStep} → Step ${step.step}`, type: "seq" });
-        }
+        addEdge({ source: sourceStep.tool, target: step.tool, label: `Step ${fromStep} → Step ${step.step}`, type: "seq" });
       }
     }
   }

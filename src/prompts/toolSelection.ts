@@ -1,5 +1,3 @@
-// src/prompts/toolSelector.ts
-
 export const toolSelection = (toolSummary: { slug: string; description: string }[]) => `You are a tool-selection assistant.
 
 Task:
