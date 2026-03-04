@@ -5,7 +5,7 @@ import { queryActionsPrompt } from "./prompts/queryActions";
 import { toolSelection } from "./prompts/toolSelection";
 import { createSession, searchTools, composio } from "./utils/session";
 import { buildGraphHTML } from "./graph/renderGraph";
-import type { ExecutionStep, ToolSchema, DependencyResult } from "./types.ts/toolGraph";
+import type { ExecutionStep, ToolSchema, DependencyResult } from "./types/toolGraph";
 
 const openRouter = new OpenRouter();
 
@@ -145,12 +145,17 @@ ${JSON.stringify(toolInfo, null, 2)}`;
   try {
     const parsed = JSON.parse(content.replace(/(,|\{)\s*(\w+)\s*:/g, '$1"$2":'));
     if (!Array.isArray(parsed)) throw new Error("not an array");
+    const toNumberArray = (val: unknown): number[] => {
+      if (Array.isArray(val)) return val.filter((v) => typeof v === "number");
+      if (typeof val === "number") return [val];
+      return [];
+    };
     return parsed.map((s: Record<string, unknown>) => ({
       step: s.step as number,
       tool: s.tool as string,
       purpose: s.purpose as string,
-      inputFrom: (s.input_from ?? s.inputFrom ?? []) as number[],
-      outputUsedBy: (s.output_used_by ?? s.outputUsedBy ?? []) as number[],
+      inputFrom: toNumberArray(s.input_from ?? s.inputFrom),
+      outputUsedBy: toNumberArray(s.output_used_by ?? s.outputUsedBy),
     }));
   } catch {
     console.warn("Failed to parse execution sequence, building linear fallback");

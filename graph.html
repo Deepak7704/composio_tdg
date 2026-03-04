@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Tool Dependency Graph — fectch my events from google calendar and send emails to att</title>
+<title>Tool Dependency Graph — List all open issues labeled "critical" in the repo myorg/ap</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',-apple-system,sans-serif;background:#0a0a0f;color:#e0e0e8;height:100vh;overflow:hidden}
@@ -55,7 +55,7 @@ svg{width:100%;height:100%}
   <div class="sidebar">
     <div class="sidebar-header">
       <h1>Tool Dependency Graph</h1>
-      <p>Query: "fectch my events from google calendar and send emails to attendes that I'm busy today we will post pone the event to nex"</p>
+      <p>Query: "List all open issues labeled &quot;critical&quot; in the repo myorg/api-server and send a Gmail summary of them to team@"</p>
     </div>
     <div class="stats">
       <div class="stat"><div class="stat-val" id="s-nodes">0</div><div class="stat-label">Tools</div></div>
@@ -87,15 +87,15 @@ svg{width:100%;height:100%}
 </div>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-const NODES = [{"id":"GOOGLECALENDAR_EVENTS_LIST","label":"GOOGLECALENDAR_EVENTS_LIST","toolkit":"GOOGLECALENDAR","description":"Returns events on the specified calendar. TIMEZONE WARNING: When using timeMin/timeMax with UTC timestamps (ending in 'Z'), the time window is interpreted in UTC regardless of the calendar's timezone."},{"id":"GOOGLECALENDAR_PATCH_EVENT","label":"GOOGLECALENDAR_PATCH_EVENT","toolkit":"GOOGLECALENDAR","description":"Update specified fields of an existing event in a Google Calendar using patch semantics (array fields like `attendees` are fully replaced if provided); ensure the `calendar_id` and `event_id` are vali"},{"id":"GOOGLECALENDAR_LIST_CALENDARS","label":"GOOGLECALENDAR_LIST_CALENDARS","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_CALENDAR_LIST_GET","label":"GOOGLECALENDAR_CALENDAR_LIST_GET","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_GET_CALENDAR","label":"GOOGLECALENDAR_GET_CALENDAR","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_GET_CALENDAR_PROFILE","label":"GOOGLECALENDAR_GET_CALENDAR_PROFILE","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_LIST_SETTINGS","label":"GOOGLECALENDAR_LIST_SETTINGS","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_SETTINGS_GET","label":"GOOGLECALENDAR_SETTINGS_GET","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_GET_CURRENT_DATE_TIME","label":"GOOGLECALENDAR_GET_CURRENT_DATE_TIME","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_EVENTS_GET","label":"GOOGLECALENDAR_EVENTS_GET","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_FIND_EVENT","label":"GOOGLECALENDAR_FIND_EVENT","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_EVENTS_INSTANCES","label":"GOOGLECALENDAR_EVENTS_INSTANCES","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_SYNC_EVENTS","label":"GOOGLECALENDAR_SYNC_EVENTS","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS","label":"GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_EVENTS_WATCH","label":"GOOGLECALENDAR_EVENTS_WATCH","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_CALENDAR_LIST_WATCH","label":"GOOGLECALENDAR_CALENDAR_LIST_WATCH","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_CHANNELS_STOP","label":"GOOGLECALENDAR_CHANNELS_STOP","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_COLORS_GET","label":"GOOGLECALENDAR_COLORS_GET","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_FREE_BUSY_QUERY","label":"GOOGLECALENDAR_FREE_BUSY_QUERY","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_ACL_GET","label":"GOOGLECALENDAR_ACL_GET","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_LIST_ACL_RULES","label":"GOOGLECALENDAR_LIST_ACL_RULES","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_UPDATE_EVENT","label":"GOOGLECALENDAR_UPDATE_EVENT","toolkit":"","description":"Dependency (from graph)"},{"id":"GOOGLECALENDAR_REMOVE_ATTENDEE","label":"GOOGLECALENDAR_REMOVE_ATTENDEE","toolkit":"","description":"Dependency (from graph)"}];
-const EDGES = [{"source":"GOOGLECALENDAR_LIST_CALENDARS","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list needs a valid calendarId. While it defaults to \"primary\", real-world usage often targets secondary/shared calendars. LIST_CALENDARS is the canonical way to discover calendar IDs the user can access (and the tool description explicitly points to it).","type":"dep"},{"source":"GOOGLECALENDAR_CALENDAR_LIST_GET","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: once you have a calendarId, you may need to confirm metadata (timeZone, accessRole) to avoid timeMin/timeMax timezone-window mistakes and to ensure the caller has sufficient access for the intended operation.","type":"dep"},{"source":"GOOGLECALENDAR_GET_CALENDAR","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list has a strong timezone caveat. Getting the calendar resource is a practical prerequisite to learn the calendar’s IANA timeZone so you can construct correct RFC3339 timeMin/timeMax offsets for “local date” queries.","type":"dep"},{"source":"GOOGLECALENDAR_GET_CALENDAR_PROFILE","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: if the caller wants to display results in the user’s primary timezone (or needs to know the user’s default timezone when timeZone is omitted), the profile can provide the user’s calendar settings/timezone context.","type":"dep"},{"source":"GOOGLECALENDAR_LIST_SETTINGS","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list supports a timeZone display parameter but warns that filtering is based on the offsets in timeMin/timeMax. Listing settings is a practical way to discover the user’s configured timezone and other relevant defaults when building correct query windows.","type":"dep"},{"source":"GOOGLECALENDAR_SETTINGS_GET","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: a narrower alternative to LIST_SETTINGS when you only need a specific setting (most commonly the user’s timezone) to format/construct timeMin/timeMax correctly.","type":"dep"},{"source":"GOOGLECALENDAR_GET_CURRENT_DATE_TIME","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list does not accept natural language like “today/tomorrow”. In real apps you often convert relative ranges into RFC3339 timestamps; a ‘current time’ tool helps generate correct absolute timeMin/timeMax boundaries (especially when coordinating with user/calendar timezone).","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_GET","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list returns summaries and may omit details depending on permissions, maxAttendees, or other constraints. A common pattern is: list to find candidate event IDs, then GET to retrieve a single event with full detail (or to confirm you matched the right one).","type":"dep"},{"source":"GOOGLECALENDAR_FIND_EVENT","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: if the user’s intent is “find the event for X” rather than “list everything”, a dedicated find/search helper can reduce the need to tune q/orderBy/timeMin/timeMax manually, then you can fall back to events_list for broader retrieval.","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_INSTANCES","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list can expand recurring events with singleEvents=true, but if you need instances for a specific recurring series (or need more controlled instance retrieval), EVENTS_INSTANCES is the complementary follow-up once you identify a recurringEventId via events_list.","type":"dep"},{"source":"GOOGLECALENDAR_SYNC_EVENTS","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list supports syncToken/nextSyncToken for incremental sync. Many real integrations do an initial events_list, store nextSyncToken, then use a dedicated sync tool (if provided) to manage incremental updates more cleanly.","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: if the product experience is “show me everything on my calendars”, you’d use the all-calendars variant instead of iterating calendarId values from LIST_CALENDARS and calling events_list repeatedly.","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_WATCH","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: for near-real-time updates, a common workflow is: initial events_list to build state, then WATCH to receive push notifications, then subsequent events_list with syncToken/updatedMin to reconcile changes.","type":"dep"},{"source":"GOOGLECALENDAR_CALENDAR_LIST_WATCH","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: if calendars can be added/removed/shared over time, you may need to watch the calendar list itself; otherwise your stored calendarId set for events_list can become stale.","type":"dep"},{"source":"GOOGLECALENDAR_CHANNELS_STOP","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: if you use EVENTS_WATCH or CALENDAR_LIST_WATCH, you need a way to stop/cleanup channels to avoid leaks and unnecessary notifications.","type":"dep"},{"source":"GOOGLECALENDAR_COLORS_GET","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: events_list returns colorId for events. If you want to render events with the correct UI colors, you’ll need the color palette mapping from the Colors resource.","type":"dep"},{"source":"GOOGLECALENDAR_FREE_BUSY_QUERY","target":"GOOGLECALENDAR_EVENTS_LIST","label":"Soft dependency: if the goal is availability rather than event details, free/busy is often the correct dependency. Many apps first use FREE_BUSY_QUERY to find open windows, then use events_list (or events_get) only when they need details.","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_GET","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: commonly used to fetch the current event resource before patching so you can (a) confirm you have the right event_id, (b) inspect existing fields (start/end, attendees, conferenceData, reminders, etc.), and (c) avoid accidental data loss—especially because patch semantics here fully replace array fields like `attendees` when provided.","type":"dep"},{"source":"GOOGLECALENDAR_FIND_EVENT","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: practical way to obtain the correct `event_id` when the user only knows human details (title/summary, date range, attendees). The tool description explicitly suggests using a find/search tool to retrieve event IDs before patching.","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_LIST","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: another common way to locate the target event and its `event_id` within a specific calendar (e.g., list events in a time window, then patch the chosen one). Useful when you already know the calendar_id but not the event_id.","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: useful when the user doesn’t know which calendar contains the event. You can search/list across calendars to discover both the correct `calendar_id` and `event_id` before calling patch_event.","type":"dep"},{"source":"GOOGLECALENDAR_LIST_CALENDARS","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: helps discover valid `calendar_id` values (beyond `primary`) and confirm the user has access to the calendar that contains the event to be patched.","type":"dep"},{"source":"GOOGLECALENDAR_CALENDAR_LIST_GET","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: used to validate a specific `calendar_id` and inspect metadata (e.g., accessRole) to ensure the user has sufficient permissions before attempting a patch (reduces avoidable 403/404 errors).","type":"dep"},{"source":"GOOGLECALENDAR_ACL_GET","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: can be used to verify whether a particular ACL rule exists / what it grants when diagnosing permission issues (e.g., user can view but not edit). Not required for patching, but very useful for troubleshooting write-access failures.","type":"dep"},{"source":"GOOGLECALENDAR_LIST_ACL_RULES","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: broader permission troubleshooting—list ACL rules on the calendar to understand why patching fails or to confirm who has writer/owner access.","type":"dep"},{"source":"GOOGLECALENDAR_UPDATE_EVENT","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency / alternative path: if the caller needs full-replacement semantics (PUT) rather than patch semantics, or if they already have a complete event resource to write back. In some workflows you GET → modify locally → UPDATE instead of PATCH.","type":"dep"},{"source":"GOOGLECALENDAR_REMOVE_ATTENDEE","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: convenience operation for attendee management. Since `patch_event` replaces the entire attendees array when provided, a dedicated remove tool can reduce the risk of accidentally dropping attendees when you only want to remove one.","type":"dep"},{"source":"GOOGLECALENDAR_GET_CURRENT_DATE_TIME","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: helps build correct RFC3339 timestamps and time-window queries when first locating the event (via list/find) or when computing a new start/end time relative to ‘now’. Not required, but reduces timezone/format mistakes.","type":"dep"},{"source":"GOOGLECALENDAR_COLORS_GET","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: if the patch workflow includes changing/validating `colorId` (even though not shown in the request schema excerpt, many event patch implementations support it). Useful to map human color choices to valid IDs.","type":"dep"},{"source":"GOOGLECALENDAR_EVENTS_WATCH","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: if the application needs to react to the patched event (or subsequent changes) via push notifications, you’d set up a watch channel. Not required to patch, but commonly paired in real systems.","type":"dep"},{"source":"GOOGLECALENDAR_SYNC_EVENTS","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: after patching, clients that maintain a local cache often run an incremental sync to reconcile state (especially if multiple clients/users can modify the same calendar).","type":"dep"},{"source":"GOOGLECALENDAR_CHANNELS_STOP","target":"GOOGLECALENDAR_PATCH_EVENT","label":"Soft dependency: lifecycle management for any watch channels created as part of a patch-and-monitor workflow (cleanup/rotation).","type":"dep"}];
-const SEQ = [{"step":1,"tool":"GOOGLECALENDAR_EVENTS_LIST","purpose":"","inputFrom":[],"outputUsedBy":[2]},{"step":2,"tool":"GOOGLECALENDAR_PATCH_EVENT","purpose":"","inputFrom":[1],"outputUsedBy":[]}];
+const NODES = [{"id":"GMAIL_SEND_EMAIL","label":"GMAIL_SEND_EMAIL","toolkit":"GMAIL","description":"Sends an email via Gmail API using the authenticated user's Google profile display name. At least one of 'to' (or 'recipient_email'), 'cc', or 'bcc' must be provided. At least one of subject or body m"},{"id":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","toolkit":"GITHUB","description":"Searches GitHub for issues and pull requests. Use qualifiers to scope searches: `repo:owner/name` for specific repos, `org:orgname` for organizations, `user:username` for personal repos, `assignee:@me"},{"id":"GITHUB_GET_THE_AUTHENTICATED_USER","label":"GITHUB_GET_THE_AUTHENTICATED_USER","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_CHECK_A_TOKEN","label":"GITHUB_CHECK_A_TOKEN","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_GET_RATE_LIMIT_STATUS_FOR_THE_AUTHENTICATED_USER","label":"GITHUB_GET_RATE_LIMIT_STATUS_FOR_THE_AUTHENTICATED_USER","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_LIST_ACCESSIBLE_REPOSITORIES","label":"GITHUB_LIST_ACCESSIBLE_REPOSITORIES","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_FIND_REPOSITORIES","label":"GITHUB_FIND_REPOSITORIES","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_GET_A_REPOSITORY","label":"GITHUB_GET_A_REPOSITORY","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_SEARCH_USERS","label":"GITHUB_SEARCH_USERS","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_SEARCH_LABELS","label":"GITHUB_SEARCH_LABELS","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_LIST_LABELS_FOR_A_REPOSITORY","label":"GITHUB_LIST_LABELS_FOR_A_REPOSITORY","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_LIST_REPOSITORY_ISSUES","label":"GITHUB_LIST_REPOSITORY_ISSUES","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_LIST_PULL_REQUESTS","label":"GITHUB_LIST_PULL_REQUESTS","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_GET_AN_ISSUE","label":"GITHUB_GET_AN_ISSUE","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_GET_A_PULL_REQUEST","label":"GITHUB_GET_A_PULL_REQUEST","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_LIST_ISSUE_COMMENTS","label":"GITHUB_LIST_ISSUE_COMMENTS","toolkit":"","description":"Dependency (from graph)"},{"id":"GITHUB_LIST_TIMELINE_EVENTS_FOR_AN_ISSUE","label":"GITHUB_LIST_TIMELINE_EVENTS_FOR_AN_ISSUE","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_GET_PROFILE","label":"GMAIL_GET_PROFILE","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_LIST_SEND_AS","label":"GMAIL_LIST_SEND_AS","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_SETTINGS_SEND_AS_GET","label":"GMAIL_SETTINGS_SEND_AS_GET","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_GET_ATTACHMENT","label":"GMAIL_GET_ATTACHMENT","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID","label":"GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_FETCH_MESSAGE_BY_THREAD_ID","label":"GMAIL_FETCH_MESSAGE_BY_THREAD_ID","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_FETCH_EMAILS","label":"GMAIL_FETCH_EMAILS","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_CREATE_EMAIL_DRAFT","label":"GMAIL_CREATE_EMAIL_DRAFT","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_SEND_DRAFT","label":"GMAIL_SEND_DRAFT","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_REPLY_TO_THREAD","label":"GMAIL_REPLY_TO_THREAD","toolkit":"","description":"Dependency (from graph)"},{"id":"GMAIL_FORWARD_MESSAGE","label":"GMAIL_FORWARD_MESSAGE","toolkit":"","description":"Dependency (from graph)"}];
+const EDGES = [{"source":"GITHUB_GET_THE_AUTHENTICATED_USER","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: the search tool supports the @me shorthand (e.g., assignee:@me, mentions:@me). To reliably expand @me to a concrete username (and to validate the caller’s identity), a client/agent commonly calls the authenticated-user endpoint first, then rewrites the query with the actual login.","type":"dep"},{"source":"GITHUB_CHECK_A_TOKEN","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: this search endpoint requires auth scopes (repo/public_repo). In real workflows, agents often validate the token and its scopes up front to fail fast (clear error) rather than discovering auth problems after issuing the search request.","type":"dep"},{"source":"GITHUB_GET_RATE_LIMIT_STATUS_FOR_THE_AUTHENTICATED_USER","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: GitHub Search APIs are rate-limited more aggressively than many other endpoints. Checking rate limit before/after searches helps avoid partial results, secondary-rate-limit errors, and enables backoff/retry logic.","type":"dep"},{"source":"GITHUB_LIST_ACCESSIBLE_REPOSITORIES","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: users often want to scope searches to repos they can access but may not know the exact owner/name. Listing accessible repos lets an agent build correct repo:owner/name qualifiers and avoid empty/permission-denied searches.","type":"dep"},{"source":"GITHUB_FIND_REPOSITORIES","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: when the user provides an imprecise repo name (or only a keyword), an agent can first search repositories to discover the canonical full name, then run issue/PR search with repo:owner/name for precision.","type":"dep"},{"source":"GITHUB_GET_A_REPOSITORY","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: after discovering a repo (from user input or repo search), fetching repository metadata can confirm default branch, visibility, archived status, and permissions—useful to decide whether to include/exclude it in subsequent issue/PR searches.","type":"dep"},{"source":"GITHUB_SEARCH_USERS","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: if a workflow builds queries using author:, assignee:, or mentions: qualifiers from human names or partial handles, searching users helps resolve the correct login to use in the query.","type":"dep"},{"source":"GITHUB_SEARCH_LABELS","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: label:\"name\" is a common qualifier, but label names are often unknown or slightly mismatched. Searching labels (or discovering them) helps construct valid label filters and reduces zero-result queries.","type":"dep"},{"source":"GITHUB_LIST_LABELS_FOR_A_REPOSITORY","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: for repo-scoped searches, listing labels is often more reliable than guessing label strings. An agent can present available labels to the user or auto-select common ones before running the search.","type":"dep"},{"source":"GITHUB_LIST_REPOSITORY_ISSUES","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: if the user’s query is strictly repo-scoped and primarily needs filtering/sorting by standard fields, listing issues can be cheaper and less rate-limited than the global search API. Agents may fall back to this when search rate limits are hit or when they need complete pagination beyond search constraints.","type":"dep"},{"source":"GITHUB_LIST_PULL_REQUESTS","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: similar to listing issues—when the intent is repo-scoped PR discovery, listing PRs can be a more rate-limit-friendly fallback than global search, and can provide deterministic pagination.","type":"dep"},{"source":"GITHUB_GET_AN_ISSUE","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: search results are often a starting point. Workflows typically follow up by fetching the full issue to get complete fields (body, timeline URLs, state_reason, etc.) or to ensure freshness before acting (commenting, labeling, closing).","type":"dep"},{"source":"GITHUB_GET_A_PULL_REQUEST","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: when a search item is a PR (presence of pull_request object), agents commonly fetch PR details (mergeability, base/head, checks, draft state) before taking next steps.","type":"dep"},{"source":"GITHUB_LIST_ISSUE_COMMENTS","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: after locating an issue/PR via search, a common next step is to read discussion context. Listing comments provides that context for summarization, triage, or automation decisions.","type":"dep"},{"source":"GITHUB_LIST_TIMELINE_EVENTS_FOR_AN_ISSUE","target":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","label":"Soft dependency: for triage and auditing, agents often need the timeline (label changes, assignments, cross-references). Search doesn’t include this, so timeline retrieval is a common follow-up.","type":"dep"},{"source":"GMAIL_GET_PROFILE","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: send_email uses the authenticated user’s Google profile display name for the From header/display name. If the caller wants to preview/confirm the exact sender identity (email address + display name) before sending, or log/audit who is sending, fetching the profile first is useful.","type":"dep"},{"source":"GMAIL_LIST_SEND_AS","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: send_email supports a from_email alias, but that alias must already exist and be verified in Gmail “Send mail as”. Listing send-as aliases lets you validate that the requested from_email is available/verified and choose the correct alias programmatically.","type":"dep"},{"source":"GMAIL_SETTINGS_SEND_AS_GET","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: if you need to validate details of a specific alias (e.g., whether it’s the primary send-as, display name, reply-to, signature, verification status) before using from_email, you’d fetch that alias’ settings.","type":"dep"},{"source":"GMAIL_GET_ATTACHMENT","target":"GMAIL_SEND_EMAIL","label":"Soft dependency (often practical): send_email attachments require a FileUploadable with an s3key that is typically produced by a prior download action. GMAIL_GET_ATTACHMENT is the most direct way in this toolkit to obtain an attachment from an existing email and get the s3key needed to re-attach/forward it in a new outgoing message.","type":"dep"},{"source":"GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: commonly used to locate the attachment metadata (attachmentId, filename, mimetype) and confirm which parts to download via GMAIL_GET_ATTACHMENT before sending a new email with that file attached.","type":"dep"},{"source":"GMAIL_FETCH_MESSAGE_BY_THREAD_ID","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: if the outgoing email is based on a conversation, you may first fetch the thread to identify the correct message/attachment to reuse, or to summarize context before composing and sending a new message.","type":"dep"},{"source":"GMAIL_FETCH_EMAILS","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: helps find the source email(s) that contain content/attachments you want to reference or reuse before sending (e.g., search for the latest invoice email, then fetch message id, then get attachment, then send_email with attachment).","type":"dep"},{"source":"GMAIL_CREATE_EMAIL_DRAFT","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: in real workflows you may want a review/approval step, scheduling by an external system, or the ability to edit before final send. Creating a draft first enables that, and then you can send via GMAIL_SEND_DRAFT instead of sending immediately.","type":"dep"},{"source":"GMAIL_SEND_DRAFT","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: complements send_email for workflows where you generate a draft (possibly with attachments) and then send it after validation, user confirmation, or later automation.","type":"dep"},{"source":"GMAIL_REPLY_TO_THREAD","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: if the intent is to respond within an existing conversation (preserving threading headers like In-Reply-To/References), reply_to_thread is typically the correct tool rather than send_email, which is more for new outbound messages.","type":"dep"},{"source":"GMAIL_FORWARD_MESSAGE","target":"GMAIL_SEND_EMAIL","label":"Soft dependency: if the user’s goal is to forward an existing message (including its original content/attachments) rather than compose a new email, forward_message is the more direct operation and avoids manual reconstruction.","type":"dep"},{"source":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","target":"GMAIL_SEND_EMAIL","label":"Step 1 → Step 2","type":"seq"}];
+const SEQ = [{"step":1,"tool":"GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS","purpose":"Retrieve all open issues labeled 'critical' in the 'myorg/api-server' repository.","inputFrom":[],"outputUsedBy":[2]},{"step":2,"tool":"GMAIL_SEND_EMAIL","purpose":"Send a summary of the critical open issues to team@myorg.com.","inputFrom":[1],"outputUsedBy":[]}];
 const RAW = {
   "executionSequence": [
     {
       "step": 1,
-      "tool": "GOOGLECALENDAR_EVENTS_LIST",
-      "purpose": "",
+      "tool": "GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS",
+      "purpose": "Retrieve all open issues labeled 'critical' in the 'myorg/api-server' repository.",
       "inputFrom": [],
       "outputUsedBy": [
         2
@@ -103,8 +103,8 @@ const RAW = {
     },
     {
       "step": 2,
-      "tool": "GOOGLECALENDAR_PATCH_EVENT",
-      "purpose": "",
+      "tool": "GMAIL_SEND_EMAIL",
+      "purpose": "Send a summary of the critical open issues to team@myorg.com.",
       "inputFrom": [
         1
       ],
@@ -113,222 +113,186 @@ const RAW = {
   ],
   "depGraphs": [
     {
-      "tool": "GOOGLECALENDAR_EVENTS_LIST",
+      "tool": "GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS",
       "data": {
         "parent_tools": [
           {
-            "description": "Lists calendars in the user’s calendar list so you can select a valid calendarId for events_list.",
-            "reason": "Soft dependency: events_list needs a valid calendarId. While it defaults to \"primary\", real-world usage often targets secondary/shared calendars. LIST_CALENDARS is the canonical way to discover calendar IDs the user can access (and the tool description explicitly points to it).",
+            "description": "Fetches the currently authenticated GitHub user (login, id, etc.).",
+            "reason": "Soft dependency: the search tool supports the @me shorthand (e.g., assignee:@me, mentions:@me). To reliably expand @me to a concrete username (and to validate the caller’s identity), a client/agent commonly calls the authenticated-user endpoint first, then rewrites the query with the actual login.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_LIST_CALENDARS"
+            "tool_name": "GITHUB_GET_THE_AUTHENTICATED_USER"
           },
           {
-            "description": "Fetches a specific calendar-list entry (often includes accessRole and may include timezone-related metadata depending on implementation).",
-            "reason": "Soft dependency: once you have a calendarId, you may need to confirm metadata (timeZone, accessRole) to avoid timeMin/timeMax timezone-window mistakes and to ensure the caller has sufficient access for the intended operation.",
+            "description": "Validates the current token and can help confirm it’s usable before searching.",
+            "reason": "Soft dependency: this search endpoint requires auth scopes (repo/public_repo). In real workflows, agents often validate the token and its scopes up front to fail fast (clear error) rather than discovering auth problems after issuing the search request.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_CALENDAR_LIST_GET"
+            "tool_name": "GITHUB_CHECK_A_TOKEN"
           },
           {
-            "description": "Retrieves the Calendar resource (commonly includes the calendar’s timeZone and other properties).",
-            "reason": "Soft dependency: events_list has a strong timezone caveat. Getting the calendar resource is a practical prerequisite to learn the calendar’s IANA timeZone so you can construct correct RFC3339 timeMin/timeMax offsets for “local date” queries.",
+            "description": "Returns REST API rate limit status for the authenticated user.",
+            "reason": "Soft dependency: GitHub Search APIs are rate-limited more aggressively than many other endpoints. Checking rate limit before/after searches helps avoid partial results, secondary-rate-limit errors, and enables backoff/retry logic.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_GET_CALENDAR"
+            "tool_name": "GITHUB_GET_RATE_LIMIT_STATUS_FOR_THE_AUTHENTICATED_USER"
           },
           {
-            "description": "Gets the user’s calendar profile (often used to infer default timezone/locale behavior).",
-            "reason": "Soft dependency: if the caller wants to display results in the user’s primary timezone (or needs to know the user’s default timezone when timeZone is omitted), the profile can provide the user’s calendar settings/timezone context.",
+            "description": "Lists repositories the authenticated user/app installation can access.",
+            "reason": "Soft dependency: users often want to scope searches to repos they can access but may not know the exact owner/name. Listing accessible repos lets an agent build correct repo:owner/name qualifiers and avoid empty/permission-denied searches.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_GET_CALENDAR_PROFILE"
+            "tool_name": "GITHUB_LIST_ACCESSIBLE_REPOSITORIES"
           },
           {
-            "description": "Lists the user’s Google Calendar settings (commonly includes timezone).",
-            "reason": "Soft dependency: events_list supports a timeZone display parameter but warns that filtering is based on the offsets in timeMin/timeMax. Listing settings is a practical way to discover the user’s configured timezone and other relevant defaults when building correct query windows.",
+            "description": "Searches for repositories matching a query.",
+            "reason": "Soft dependency: when the user provides an imprecise repo name (or only a keyword), an agent can first search repositories to discover the canonical full name, then run issue/PR search with repo:owner/name for precision.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_LIST_SETTINGS"
+            "tool_name": "GITHUB_FIND_REPOSITORIES"
           },
           {
-            "description": "Gets a single Calendar setting by id (e.g., timezone).",
-            "reason": "Soft dependency: a narrower alternative to LIST_SETTINGS when you only need a specific setting (most commonly the user’s timezone) to format/construct timeMin/timeMax correctly.",
+            "description": "Fetches details for a specific repository.",
+            "reason": "Soft dependency: after discovering a repo (from user input or repo search), fetching repository metadata can confirm default branch, visibility, archived status, and permissions—useful to decide whether to include/exclude it in subsequent issue/PR searches.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_SETTINGS_GET"
+            "tool_name": "GITHUB_GET_A_REPOSITORY"
           },
           {
-            "description": "Provides the current date/time to help compute RFC3339 timeMin/timeMax for relative queries.",
-            "reason": "Soft dependency: events_list does not accept natural language like “today/tomorrow”. In real apps you often convert relative ranges into RFC3339 timestamps; a ‘current time’ tool helps generate correct absolute timeMin/timeMax boundaries (especially when coordinating with user/calendar timezone).",
+            "description": "Searches GitHub users to resolve logins for qualifiers.",
+            "reason": "Soft dependency: if a workflow builds queries using author:, assignee:, or mentions: qualifiers from human names or partial handles, searching users helps resolve the correct login to use in the query.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_GET_CURRENT_DATE_TIME"
+            "tool_name": "GITHUB_SEARCH_USERS"
           },
           {
-            "description": "Fetches a single event by eventId after discovering it via events_list.",
-            "reason": "Soft dependency: events_list returns summaries and may omit details depending on permissions, maxAttendees, or other constraints. A common pattern is: list to find candidate event IDs, then GET to retrieve a single event with full detail (or to confirm you matched the right one).",
+            "description": "Searches labels (typically within a repository context) to find exact label names.",
+            "reason": "Soft dependency: label:\"name\" is a common qualifier, but label names are often unknown or slightly mismatched. Searching labels (or discovering them) helps construct valid label filters and reduces zero-result queries.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_GET"
+            "tool_name": "GITHUB_SEARCH_LABELS"
           },
           {
-            "description": "Higher-level search for an event; can be used before/alongside events_list depending on UX.",
-            "reason": "Soft dependency: if the user’s intent is “find the event for X” rather than “list everything”, a dedicated find/search helper can reduce the need to tune q/orderBy/timeMin/timeMax manually, then you can fall back to events_list for broader retrieval.",
+            "description": "Lists all labels in a repository.",
+            "reason": "Soft dependency: for repo-scoped searches, listing labels is often more reliable than guessing label strings. An agent can present available labels to the user or auto-select common ones before running the search.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_FIND_EVENT"
+            "tool_name": "GITHUB_LIST_LABELS_FOR_A_REPOSITORY"
           },
           {
-            "description": "Lists instances of a recurring event after identifying the recurring series via events_list.",
-            "reason": "Soft dependency: events_list can expand recurring events with singleEvents=true, but if you need instances for a specific recurring series (or need more controlled instance retrieval), EVENTS_INSTANCES is the complementary follow-up once you identify a recurringEventId via events_list.",
+            "description": "Lists issues for a repository (can include PRs depending on parameters), useful as an alternative/fallback to search.",
+            "reason": "Soft dependency: if the user’s query is strictly repo-scoped and primarily needs filtering/sorting by standard fields, listing issues can be cheaper and less rate-limited than the global search API. Agents may fall back to this when search rate limits are hit or when they need complete pagination beyond search constraints.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_INSTANCES"
+            "tool_name": "GITHUB_LIST_REPOSITORY_ISSUES"
           },
           {
-            "description": "Performs incremental synchronization of events (often wraps list+syncToken patterns).",
-            "reason": "Soft dependency: events_list supports syncToken/nextSyncToken for incremental sync. Many real integrations do an initial events_list, store nextSyncToken, then use a dedicated sync tool (if provided) to manage incremental updates more cleanly.",
+            "description": "Lists pull requests for a repository; useful alternative to search for repo-only PR queries.",
+            "reason": "Soft dependency: similar to listing issues—when the intent is repo-scoped PR discovery, listing PRs can be a more rate-limit-friendly fallback than global search, and can provide deterministic pagination.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_SYNC_EVENTS"
+            "tool_name": "GITHUB_LIST_PULL_REQUESTS"
           },
           {
-            "description": "Lists events across all calendars; an alternative/companion to events_list for cross-calendar views.",
-            "reason": "Soft dependency: if the product experience is “show me everything on my calendars”, you’d use the all-calendars variant instead of iterating calendarId values from LIST_CALENDARS and calling events_list repeatedly.",
+            "description": "Fetches full details for a specific issue.",
+            "reason": "Soft dependency: search results are often a starting point. Workflows typically follow up by fetching the full issue to get complete fields (body, timeline URLs, state_reason, etc.) or to ensure freshness before acting (commenting, labeling, closing).",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS"
+            "tool_name": "GITHUB_GET_AN_ISSUE"
           },
           {
-            "description": "Creates a watch channel for event changes; complements events_list for ongoing monitoring.",
-            "reason": "Soft dependency: for near-real-time updates, a common workflow is: initial events_list to build state, then WATCH to receive push notifications, then subsequent events_list with syncToken/updatedMin to reconcile changes.",
+            "description": "Fetches full details for a specific pull request.",
+            "reason": "Soft dependency: when a search item is a PR (presence of pull_request object), agents commonly fetch PR details (mergeability, base/head, checks, draft state) before taking next steps.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_WATCH"
+            "tool_name": "GITHUB_GET_A_PULL_REQUEST"
           },
           {
-            "description": "Watches the user’s calendar list for changes; helps keep the set of calendarIds current.",
-            "reason": "Soft dependency: if calendars can be added/removed/shared over time, you may need to watch the calendar list itself; otherwise your stored calendarId set for events_list can become stale.",
+            "description": "Lists comments on an issue.",
+            "reason": "Soft dependency: after locating an issue/PR via search, a common next step is to read discussion context. Listing comments provides that context for summarization, triage, or automation decisions.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_CALENDAR_LIST_WATCH"
+            "tool_name": "GITHUB_LIST_ISSUE_COMMENTS"
           },
           {
-            "description": "Stops an active watch channel created by *_WATCH tools.",
-            "reason": "Soft dependency: if you use EVENTS_WATCH or CALENDAR_LIST_WATCH, you need a way to stop/cleanup channels to avoid leaks and unnecessary notifications.",
+            "description": "Lists timeline events for an issue.",
+            "reason": "Soft dependency: for triage and auditing, agents often need the timeline (label changes, assignments, cross-references). Search doesn’t include this, so timeline retrieval is a common follow-up.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_CHANNELS_STOP"
-          },
-          {
-            "description": "Retrieves the color definitions used to interpret event colorId values.",
-            "reason": "Soft dependency: events_list returns colorId for events. If you want to render events with the correct UI colors, you’ll need the color palette mapping from the Colors resource.",
-            "required": false,
-            "tool_name": "GOOGLECALENDAR_COLORS_GET"
-          },
-          {
-            "description": "Queries free/busy information; complements events_list for scheduling/availability use cases.",
-            "reason": "Soft dependency: if the goal is availability rather than event details, free/busy is often the correct dependency. Many apps first use FREE_BUSY_QUERY to find open windows, then use events_list (or events_get) only when they need details.",
-            "required": false,
-            "tool_name": "GOOGLECALENDAR_FREE_BUSY_QUERY"
+            "tool_name": "GITHUB_LIST_TIMELINE_EVENTS_FOR_AN_ISSUE"
           }
         ],
-        "tool_name": "GOOGLECALENDAR_EVENTS_LIST"
+        "tool_name": "GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS"
       },
       "error": null,
       "successful": true,
-      "logId": "log_dAu6gFktP9P9"
+      "logId": "log_XPHs_GR1pBum"
     },
     {
-      "tool": "GOOGLECALENDAR_PATCH_EVENT",
+      "tool": "GMAIL_SEND_EMAIL",
       "data": {
         "parent_tools": [
           {
-            "description": "",
-            "reason": "Soft dependency: commonly used to fetch the current event resource before patching so you can (a) confirm you have the right event_id, (b) inspect existing fields (start/end, attendees, conferenceData, reminders, etc.), and (c) avoid accidental data loss—especially because patch semantics here fully replace array fields like `attendees` when provided.",
+            "description": "Fetches the authenticated user’s Gmail profile (e.g., email address, message/thread totals).",
+            "reason": "Soft dependency: send_email uses the authenticated user’s Google profile display name for the From header/display name. If the caller wants to preview/confirm the exact sender identity (email address + display name) before sending, or log/audit who is sending, fetching the profile first is useful.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_GET"
+            "tool_name": "GMAIL_GET_PROFILE"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: practical way to obtain the correct `event_id` when the user only knows human details (title/summary, date range, attendees). The tool description explicitly suggests using a find/search tool to retrieve event IDs before patching.",
+            "description": "Lists configured “Send mail as” identities/aliases for the mailbox.",
+            "reason": "Soft dependency: send_email supports a from_email alias, but that alias must already exist and be verified in Gmail “Send mail as”. Listing send-as aliases lets you validate that the requested from_email is available/verified and choose the correct alias programmatically.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_FIND_EVENT"
+            "tool_name": "GMAIL_LIST_SEND_AS"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: another common way to locate the target event and its `event_id` within a specific calendar (e.g., list events in a time window, then patch the chosen one). Useful when you already know the calendar_id but not the event_id.",
+            "description": "Gets settings/details for a specific “sendAs” alias.",
+            "reason": "Soft dependency: if you need to validate details of a specific alias (e.g., whether it’s the primary send-as, display name, reply-to, signature, verification status) before using from_email, you’d fetch that alias’ settings.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_LIST"
+            "tool_name": "GMAIL_SETTINGS_SEND_AS_GET"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: useful when the user doesn’t know which calendar contains the event. You can search/list across calendars to discover both the correct `calendar_id` and `event_id` before calling patch_event.",
+            "description": "Downloads an attachment from an existing Gmail message and returns a file reference (s3key) suitable for re-upload/attachment.",
+            "reason": "Soft dependency (often practical): send_email attachments require a FileUploadable with an s3key that is typically produced by a prior download action. GMAIL_GET_ATTACHMENT is the most direct way in this toolkit to obtain an attachment from an existing email and get the s3key needed to re-attach/forward it in a new outgoing message.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS"
+            "tool_name": "GMAIL_GET_ATTACHMENT"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: helps discover valid `calendar_id` values (beyond `primary`) and confirm the user has access to the calendar that contains the event to be patched.",
+            "description": "Fetches a specific message (full payload/parts) by message ID.",
+            "reason": "Soft dependency: commonly used to locate the attachment metadata (attachmentId, filename, mimetype) and confirm which parts to download via GMAIL_GET_ATTACHMENT before sending a new email with that file attached.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_LIST_CALENDARS"
+            "tool_name": "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: used to validate a specific `calendar_id` and inspect metadata (e.g., accessRole) to ensure the user has sufficient permissions before attempting a patch (reduces avoidable 403/404 errors).",
+            "description": "Fetches messages in a thread by thread ID.",
+            "reason": "Soft dependency: if the outgoing email is based on a conversation, you may first fetch the thread to identify the correct message/attachment to reuse, or to summarize context before composing and sending a new message.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_CALENDAR_LIST_GET"
+            "tool_name": "GMAIL_FETCH_MESSAGE_BY_THREAD_ID"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: can be used to verify whether a particular ACL rule exists / what it grants when diagnosing permission issues (e.g., user can view but not edit). Not required for patching, but very useful for troubleshooting write-access failures.",
+            "description": "Fetches emails (often with query/filtering) to locate relevant messages.",
+            "reason": "Soft dependency: helps find the source email(s) that contain content/attachments you want to reference or reuse before sending (e.g., search for the latest invoice email, then fetch message id, then get attachment, then send_email with attachment).",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_ACL_GET"
+            "tool_name": "GMAIL_FETCH_EMAILS"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: broader permission troubleshooting—list ACL rules on the calendar to understand why patching fails or to confirm who has writer/owner access.",
+            "description": "Creates a draft message in Gmail for later sending.",
+            "reason": "Soft dependency: in real workflows you may want a review/approval step, scheduling by an external system, or the ability to edit before final send. Creating a draft first enables that, and then you can send via GMAIL_SEND_DRAFT instead of sending immediately.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_LIST_ACL_RULES"
+            "tool_name": "GMAIL_CREATE_EMAIL_DRAFT"
           },
           {
-            "description": "",
-            "reason": "Soft dependency / alternative path: if the caller needs full-replacement semantics (PUT) rather than patch semantics, or if they already have a complete event resource to write back. In some workflows you GET → modify locally → UPDATE instead of PATCH.",
+            "description": "Sends an existing Gmail draft.",
+            "reason": "Soft dependency: complements send_email for workflows where you generate a draft (possibly with attachments) and then send it after validation, user confirmation, or later automation.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_UPDATE_EVENT"
+            "tool_name": "GMAIL_SEND_DRAFT"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: convenience operation for attendee management. Since `patch_event` replaces the entire attendees array when provided, a dedicated remove tool can reduce the risk of accidentally dropping attendees when you only want to remove one.",
+            "description": "Replies within an existing Gmail thread.",
+            "reason": "Soft dependency: if the intent is to respond within an existing conversation (preserving threading headers like In-Reply-To/References), reply_to_thread is typically the correct tool rather than send_email, which is more for new outbound messages.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_REMOVE_ATTENDEE"
+            "tool_name": "GMAIL_REPLY_TO_THREAD"
           },
           {
-            "description": "",
-            "reason": "Soft dependency: helps build correct RFC3339 timestamps and time-window queries when first locating the event (via list/find) or when computing a new start/end time relative to ‘now’. Not required, but reduces timezone/format mistakes.",
+            "description": "Forwards an existing Gmail message.",
+            "reason": "Soft dependency: if the user’s goal is to forward an existing message (including its original content/attachments) rather than compose a new email, forward_message is the more direct operation and avoids manual reconstruction.",
             "required": false,
-            "tool_name": "GOOGLECALENDAR_GET_CURRENT_DATE_TIME"
-          },
-          {
-            "description": "",
-            "reason": "Soft dependency: if the patch workflow includes changing/validating `colorId` (even though not shown in the request schema excerpt, many event patch implementations support it). Useful to map human color choices to valid IDs.",
-            "required": false,
-            "tool_name": "GOOGLECALENDAR_COLORS_GET"
-          },
-          {
-            "description": "",
-            "reason": "Soft dependency: if the application needs to react to the patched event (or subsequent changes) via push notifications, you’d set up a watch channel. Not required to patch, but commonly paired in real systems.",
-            "required": false,
-            "tool_name": "GOOGLECALENDAR_EVENTS_WATCH"
-          },
-          {
-            "description": "",
-            "reason": "Soft dependency: after patching, clients that maintain a local cache often run an incremental sync to reconcile state (especially if multiple clients/users can modify the same calendar).",
-            "required": false,
-            "tool_name": "GOOGLECALENDAR_SYNC_EVENTS"
-          },
-          {
-            "description": "",
-            "reason": "Soft dependency: lifecycle management for any watch channels created as part of a patch-and-monitor workflow (cleanup/rotation).",
-            "required": false,
-            "tool_name": "GOOGLECALENDAR_CHANNELS_STOP"
+            "tool_name": "GMAIL_FORWARD_MESSAGE"
           }
         ],
-        "tool_name": "GOOGLECALENDAR_PATCH_EVENT"
+        "tool_name": "GMAIL_SEND_EMAIL"
       },
       "error": null,
       "successful": true,
-      "logId": "log_nM3OailO1XrW"
+      "logId": "log_8UE7o6L9vl8c"
     }
   ]
 };
-const primarySlugs = new Set(["GOOGLECALENDAR_EVENTS_LIST","GOOGLECALENDAR_PATCH_EVENT"]);
+const primarySlugs = new Set(["GMAIL_SEND_EMAIL","GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS"]);
 
 document.getElementById("s-nodes").textContent = NODES.length;
 document.getElementById("s-edges").textContent = EDGES.length;
@@ -342,7 +306,7 @@ document.getElementById("raw-panel").textContent = JSON.stringify(RAW, null, 2);
   SEQ.forEach((s, i) => {
     const shortTool = s.tool.replace(/^GMAIL_|^GOOGLE[A-Z]*_|^GITHUB_/, "");
     html += '<div class="pipe-step"><div class="pipe-num">' + s.step + '</div><div class="pipe-tool">' + shortTool + '</div><div class="pipe-purpose">' + (s.purpose || "") + '</div>';
-    if (s.inputFrom && s.inputFrom.length) html += '<div class="pipe-deps">needs step ' + s.inputFrom.join(", ") + '</div>';
+    if (Array.isArray(s.inputFrom) && s.inputFrom.length) html += '<div class="pipe-deps">needs step ' + s.inputFrom.join(", ") + '</div>';
     html += '</div>';
     if (i < SEQ.length - 1) html += '<div class="pipe-arrow">→</div>';
   });

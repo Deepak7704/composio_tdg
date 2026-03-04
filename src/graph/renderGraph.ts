@@ -123,7 +123,7 @@ document.getElementById("raw-panel").textContent = JSON.stringify(RAW, null, 2);
   SEQ.forEach((s, i) => {
     const shortTool = s.tool.replace(/^GMAIL_|^GOOGLE[A-Z]*_|^GITHUB_/, "");
     html += '<div class="pipe-step"><div class="pipe-num">' + s.step + '</div><div class="pipe-tool">' + shortTool + '</div><div class="pipe-purpose">' + (s.purpose || "") + '</div>';
-    if (s.inputFrom && s.inputFrom.length) html += '<div class="pipe-deps">needs step ' + s.inputFrom.join(", ") + '</div>';
+    if (Array.isArray(s.inputFrom) && s.inputFrom.length) html += '<div class="pipe-deps">needs step ' + s.inputFrom.join(", ") + '</div>';
     html += '</div>';
     if (i < SEQ.length - 1) html += '<div class="pipe-arrow">\u2192</div>';
   });
