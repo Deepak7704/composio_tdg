@@ -22,6 +22,7 @@ export const searchTools = async (
       method: "POST",
       headers: { "x-api-key": process.env.COMPOSIO_API_KEY || "", "Content-Type": "application/json" },
       body: JSON.stringify({
+        toolkits: ["googlesuper", "github"],
         queries: JSON.parse((actions || "[]").replace(/(,|\{)\s*(\w+)\s*:/g, '$1"$2":'))
           ?.map((a: { query: string }) => ({ use_case: a.query }))
           ?.slice(0, 7) || [],
